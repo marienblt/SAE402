@@ -210,7 +210,7 @@
     pointer-events: none;
   }
 
-  /* ── Superposition de fin ── */
+  /* ── Superposition défaite ── */
   .superposition {
     position: fixed; inset: 0; z-index: 60;
     background: rgba(10,6,2,.9);
@@ -231,43 +231,6 @@
   .fenetre h2 { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--or-vif); margin-bottom: 8px; letter-spacing: .08em; }
   .fenetre p  { color: var(--ivoire-f); font-size: .92rem; line-height: 1.5; margin-bottom: 12px; }
   .boutons-fenetre { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-
-  /* Fenêtre victoire avec motif */
-  .fenetre-victoire {
-    max-width: 280px;
-    padding: 28px 28px 24px;
-  }
-  .titre-victoire {
-    font-family: 'Cinzel', serif; font-size: clamp(.85rem, 3vw, 1rem);
-    font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
-    color: var(--or-vif);
-    text-shadow: 0 0 20px rgba(240,192,96,.5);
-    margin-bottom: 6px; text-align: center;
-  }
-  .sous-titre-victoire {
-    font-family: 'Crimson Text', serif; font-style: italic;
-    font-size: clamp(.78rem, 2.5vw, .88rem);
-    color: rgba(200, 178, 140, 0.8);
-    text-align: center; margin-bottom: 18px;
-  }
-  .enveloppeur-motif {
-    display: flex; justify-content: center; align-items: center;
-    margin-bottom: 20px;
-    position: relative;
-  }
-  .enveloppeur-motif::before {
-    content: '';
-    position: absolute; inset: -6px;
-    border-radius: 14px;
-    background: radial-gradient(ellipse at center, rgba(240,192,96,.1), transparent 70%);
-    pointer-events: none;
-  }
-  #canvasMotifVictoire {
-    border-radius: 10px;
-    border: 1px solid rgba(240, 192, 96, 0.25);
-    background: rgba(0,0,0,.35);
-    display: block;
-  }
   .fenetre button {
     padding: 9px 22px;
     background: linear-gradient(135deg, #6b4226, #a0653a);
@@ -279,6 +242,48 @@
   .fenetre button:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .fenetre button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
   .fenetre button.secondaire { background: linear-gradient(135deg, #2c3e50, #4a6074); color: var(--ivoire-f); border-color: rgba(255,255,255,.1); }
+
+  /* ── Superposition victoire (style page d'accueil) ── */
+  #superpositionVictoire {
+    position: fixed; inset: 0; z-index: 60;
+    background:
+      linear-gradient(rgba(10, 6, 2, 0.45), rgba(10, 6, 2, 0.45)),
+      url("../IMG/Fichier 2rue des tanneurs.png") center center / cover no-repeat;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .5s;
+  }
+  #superpositionVictoire.visible { opacity: 1; pointer-events: all; }
+
+  .enveloppeur-motif {
+    display: flex; justify-content: center; align-items: center;
+    position: relative;
+  }
+  .enveloppeur-motif::before {
+    content: '';
+    position: absolute; inset: -6px;
+    border-radius: 14px;
+    background: radial-gradient(ellipse at center, rgba(240,192,96,.12), transparent 70%);
+    pointer-events: none;
+  }
+  #canvasMotifVictoire {
+    border-radius: 10px;
+    border: 1px solid rgba(240, 192, 96, 0.25);
+    background: rgba(0,0,0,.35);
+    display: block;
+  }
+
+  .bouton-retour {
+    font-family: 'Crimson Text', serif; font-style: italic;
+    font-size: clamp(.8rem, 2.8vw, .95rem);
+    color: var(--ivoire-f);
+    background: none; border: none;
+    cursor: pointer; letter-spacing: .05em;
+    opacity: .7; transition: opacity .2s;
+  }
+  .bouton-retour:hover { opacity: 1; }
 
   /* Confettis */
   #canvasConfettis {

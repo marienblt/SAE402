@@ -46,18 +46,22 @@
 </div>
 
 <!-- Victoire -->
-<div class="superposition" id="superpositionVictoire">
-    <div class="fenetre fenetre-victoire">
-      <div class="titre-victoire">✦ Motif accompli ✦</div>
-      <div class="sous-titre-victoire">Vous avez tracé le chemin sans dévier</div>
-      <div class="enveloppeur-motif">
-        <canvas id="canvasMotifVictoire"></canvas>
-      </div>
-      <div class="boutons-fenetre">
-        <button onclick="rejouer()">Rejouer</button>
-        <button class="secondaire" onclick="allerSelection()">← Retour</button>
-      </div>
+<div id="superpositionVictoire">
+    <div class="titre-selection">
+      Rue des Tanneurs
+      <small>Motif accompli</small>
     </div>
+    <div class="separateur">✦</div>
+    <div class="enveloppeur-motif">
+      <canvas id="canvasMotifVictoire"></canvas>
+    </div>
+    <div class="bulle-consignes">
+      <p>Vous avez guidé la balle jusqu'à l'étoile.</p>
+    </div>
+    <div class="enveloppeur-bouton">
+      <button class="bouton-commencer" onclick="rejouer()">Rejouer</button>
+    </div>
+    <button class="bouton-retour" onclick="allerSelection()">← Retour</button>
 </div>
 
 <!-- Défaite -->
