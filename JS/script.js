@@ -2,9 +2,13 @@
    CONFIG
 ═══════════════════════════════════════════ */
 const CFG = {
-  corridor:    30,
-  totalSec:   120,
-  timePenalty: 10,
+  corridor:      30,
+  totalSec:     120,
+  timePenalty:   10,
+  gravite:     0.0018,  // accélération par degré d'inclinaison
+  amortissement: 0.92,  // friction de la balle
+  vitesseMax:     6,    // pixels/frame max
+  trailMax:      50,    // longueur de la traînée
 };
 
 const POURCENTAGES_CHEMIN = [
@@ -25,21 +29,23 @@ const POURCENTAGES_CHEMIN = [
 ═══════════════════════════════════════════ */
 let secondesRestantes = CFG.totalSec;
 let intervalleMinuterie;
-let jeuActif = false, enDessin = false;
-let pointsTrace  = [];
-let pointsChemin = [];
-let progression  = 0;
+let jeuActif        = false;
+let balle           = { x: 0, y: 0, vx: 0, vy: 0 };
+let inclinaison     = { gamma: 0, beta: 0 };
+let pointsTrace     = [];
+let pointsChemin    = [];
+let progression     = 0;
 let penaliteEnCours = false;
 let partiesConfettis = [];
 
 /* ═══════════════════════════════════════════
    DOM
 ═══════════════════════════════════════════ */
-const canvas        = document.getElementById('canvasJeu');
-const ctx           = canvas.getContext('2d');
+const canvas          = document.getElementById('canvasJeu');
+const ctx             = canvas.getContext('2d');
 const canvasConfettis = document.getElementById('canvasConfettis');
-const ctxConfettis  = canvasConfettis.getContext('2d');
-const elementTemps  = document.getElementById('temps');
+const ctxConfettis    = canvasConfettis.getContext('2d');
+const elementTemps    = document.getElementById('temps');
 const elementInstruction = document.getElementById('barreInstruction');
 
 /* ═══════════════════════════════════════════
@@ -75,18 +81,50 @@ function construireChemin() {
 window.addEventListener('resize', () => { redimensionner(); if (jeuActif) dessinerImage(); });
 
 /* ═══════════════════════════════════════════
+   CAPTEUR D'INCLINAISON
+═══════════════════════════════════════════ */
+window.addEventListener('deviceorientation', (e) => {
+  inclinaison.gamma = e.gamma || 0; // inclinaison gauche/droite (-90 à 90)
+  inclinaison.beta  = e.beta  || 0; // inclinaison avant/arrière (-180 à 180)
+});
+
+// Simulation bureau : la souris contrôle l'inclinaison
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  inclinaison.gamma = (e.clientX - cx) / rect.width  * 60;
+  inclinaison.beta  = (e.clientY - cy) / rect.height * 60;
+});
+
+/* ═══════════════════════════════════════════
    SÉLECTION DE NIVEAU
 ═══════════════════════════════════════════ */
-function choisirNiveau() {
+async function choisirNiveau() {
+  // Demander la permission iOS 13+ pour le gyroscope
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const perm = await DeviceOrientationEvent.requestPermission();
+      if (perm !== 'granted') {
+        afficherNotification('Permission capteurs refusée', 'erreur');
+        return;
+      }
+    } catch (err) {
+      console.warn('Permission capteurs :', err);
+    }
+  }
   document.getElementById('selectionNiveau').classList.add('masque');
   demarrerDecompte();
 }
+
 function allerSelection() {
   masquer('superpositionVictoire'); masquer('superpositionDefaite');
-  jeuActif = false; enDessin = false;
+  jeuActif = false;
   clearInterval(intervalleMinuterie);
   document.getElementById('selectionNiveau').classList.remove('masque');
 }
+
 function rejouer() {
   masquer('superpositionVictoire'); masquer('superpositionDefaite');
   demarrerDecompte();
@@ -129,11 +167,17 @@ function initialiserJeu() {
   pointsTrace       = [];
   penaliteEnCours   = false;
   jeuActif          = true;
-  enDessin          = false;
+  inclinaison       = { gamma: 0, beta: 0 };
+  balle = {
+    x:  pointsChemin[0].x,
+    y:  pointsChemin[0].y,
+    vx: 0,
+    vy: 0,
+  };
   mettreAJourMinuterie();
   clearInterval(intervalleMinuterie);
   intervalleMinuterie = setInterval(tick, 1000);
-  elementInstruction.textContent = 'Tracez le motif sans toucher les bords !';
+  elementInstruction.textContent = 'Inclinez le téléphone pour guider la balle !';
   requestAnimationFrame(boucle);
 }
 
@@ -153,42 +197,41 @@ function mettreAJourMinuterie() {
 }
 
 /* ═══════════════════════════════════════════
-   ÉVÉNEMENTS POINTEUR
+   PHYSIQUE DE LA BALLE
 ═══════════════════════════════════════════ */
-function obtenirPosition(e) {
-  const rect = canvas.getBoundingClientRect();
-  const src  = e.touches ? e.touches[0] : e;
-  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
-}
-
-canvas.addEventListener('mousedown',  e => commencerDessin(obtenirPosition(e)));
-canvas.addEventListener('mousemove',  e => { if (enDessin) continuerDessin(obtenirPosition(e)); });
-canvas.addEventListener('mouseup',    () => terminerDessin());
-canvas.addEventListener('mouseleave', () => terminerDessin());
-
-canvas.addEventListener('touchstart', e => { e.preventDefault(); commencerDessin(obtenirPosition(e)); },  { passive: false });
-canvas.addEventListener('touchmove',  e => { e.preventDefault(); if (enDessin) continuerDessin(obtenirPosition(e)); }, { passive: false });
-canvas.addEventListener('touchend',   e => { e.preventDefault(); terminerDessin(); }, { passive: false });
-
-function commencerDessin(pos) {
+function mettreAJourBalle() {
   if (!jeuActif) return;
-  const depart = pointsChemin[0];
-  if (Math.hypot(pos.x - depart.x, pos.y - depart.y) > CFG.corridor * 1.5) {
-    afficherNotification('Commencez au début du motif ▶', 'erreur');
-    return;
+
+  // Accélération due à l'inclinaison (gravité simulée)
+  balle.vx += inclinaison.gamma * CFG.gravite * LG;
+  balle.vy += inclinaison.beta  * CFG.gravite * HT;
+
+  // Amortissement (friction)
+  balle.vx *= CFG.amortissement;
+  balle.vy *= CFG.amortissement;
+
+  // Limite de vitesse
+  const vitesse = Math.hypot(balle.vx, balle.vy);
+  if (vitesse > CFG.vitesseMax) {
+    balle.vx = balle.vx / vitesse * CFG.vitesseMax;
+    balle.vy = balle.vy / vitesse * CFG.vitesseMax;
   }
-  enDessin   = true;
-  pointsTrace = [pos];
-  progression = 0;
-  elementInstruction.textContent = 'Continuez sans toucher les bords…';
-}
 
-function continuerDessin(pos) {
-  if (!jeuActif || !enDessin) return;
-  pointsTrace.push(pos);
+  // Déplacement
+  balle.x += balle.vx;
+  balle.y += balle.vy;
 
-  const plusProche = plusProchePointChemin(pos);
-  const dist       = Math.hypot(pos.x - plusProche.x, pos.y - plusProche.y);
+  // Contraindre au canvas
+  balle.x = Math.max(0, Math.min(LG, balle.x));
+  balle.y = Math.max(0, Math.min(HT, balle.y));
+
+  // Traînée
+  pointsTrace.push({ x: balle.x, y: balle.y });
+  if (pointsTrace.length > CFG.trailMax) pointsTrace.shift();
+
+  // Vérification du couloir
+  const plusProche = plusProchePointChemin(balle);
+  const dist       = Math.hypot(balle.x - plusProche.x, balle.y - plusProche.y);
 
   if (dist > CFG.corridor) {
     appliquerPenalite();
@@ -199,18 +242,8 @@ function continuerDessin(pos) {
 
   const pointFin = pointsChemin[pointsChemin.length - 1];
   if (progression >= pointsChemin.length - 2 &&
-      Math.hypot(pos.x - pointFin.x, pos.y - pointFin.y) < CFG.corridor * 0.6) {
+      Math.hypot(balle.x - pointFin.x, balle.y - pointFin.y) < CFG.corridor * 0.6) {
     declencherVictoire();
-  }
-}
-
-function terminerDessin() {
-  if (!enDessin) return;
-  enDessin = false;
-  if (progression < pointsChemin.length - 2) {
-    afficherNotification('Ne levez pas le doigt !', 'erreur');
-    pointsTrace = [];
-    progression = 0;
   }
 }
 
@@ -228,7 +261,8 @@ function appliquerPenalite() {
   secondesRestantes = Math.max(0, secondesRestantes - CFG.timePenalty);
   mettreAJourMinuterie();
 
-  enDessin    = false;
+  // Réinitialiser la balle au départ
+  balle       = { x: pointsChemin[0].x, y: pointsChemin[0].y, vx: 0, vy: 0 };
   pointsTrace = [];
   progression = 0;
   jeuActif    = false;
@@ -239,7 +273,7 @@ function appliquerPenalite() {
       declencherDefaite('Le temps est écoulé !');
     } else {
       jeuActif = true;
-      elementInstruction.textContent = `Recommencez depuis le début du motif ! (−${CFG.timePenalty}s)`;
+      elementInstruction.textContent = `Recommencez depuis le début ! (−${CFG.timePenalty}s)`;
     }
   }, 1000);
 }
@@ -270,14 +304,14 @@ function plusProchePointSegment(p, a, b) {
    VICTOIRE / DÉFAITE
 ═══════════════════════════════════════════ */
 function declencherDefaite(raison) {
-  jeuActif = false; enDessin = false;
+  jeuActif = false;
   clearInterval(intervalleMinuterie);
   document.getElementById('raisonDefaite').textContent = raison;
   setTimeout(() => document.getElementById('superpositionDefaite').classList.add('visible'), 600);
 }
 
 function declencherVictoire() {
-  jeuActif = false; enDessin = false;
+  jeuActif = false;
   clearInterval(intervalleMinuterie);
   lancerConfettis();
   setTimeout(() => {
@@ -293,7 +327,6 @@ function dessinerMotifVictoire() {
   cv.height = taille;
   const c = cv.getContext('2d');
 
-  // Points du motif mis à l'échelle du petit canvas
   const marge = taille * 0.1;
   const zone  = taille - marge * 2;
   const pts = POURCENTAGES_CHEMIN.map(([px, py]) => ({
@@ -303,7 +336,6 @@ function dessinerMotifVictoire() {
 
   const cor = taille * 0.055;
 
-  // Fond intérieur du couloir
   c.beginPath();
   const gauche = [], droite = [];
   for (let i = 0; i < pts.length - 1; i++) {
@@ -325,7 +357,6 @@ function dessinerMotifVictoire() {
   c.fillStyle = 'rgba(255, 240, 180, 0.10)';
   c.fill();
 
-  // Bords du couloir
   c.save();
   c.strokeStyle = 'rgba(240, 192, 96, 0.9)';
   c.lineWidth = 1.5;
@@ -346,7 +377,6 @@ function dessinerMotifVictoire() {
   }
   c.restore();
 
-  // Tracé du joueur en vert
   c.save();
   c.lineCap = 'round'; c.lineJoin = 'round';
   c.lineWidth = 2;
@@ -357,7 +387,6 @@ function dessinerMotifVictoire() {
   c.stroke();
   c.restore();
 
-  // Marqueurs départ / arrivée
   c.font = `bold ${Math.round(taille * 0.08)}px sans-serif`;
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillStyle = '#2ecc71'; c.shadowColor = 'rgba(0,0,0,.6)'; c.shadowBlur = 4;
@@ -370,8 +399,9 @@ function dessinerMotifVictoire() {
    BOUCLE DE RENDU
 ═══════════════════════════════════════════ */
 function boucle() {
+  mettreAJourBalle();
   dessinerImage();
-  if (jeuActif || enDessin) requestAnimationFrame(boucle);
+  if (jeuActif) requestAnimationFrame(boucle);
 }
 
 function dessinerImage() {
@@ -388,7 +418,7 @@ function dessinerImage() {
   ctx.fillRect(0, 0, LG, HT);
 
   dessinerMotif();
-  dessinerTrace();
+  dessinerBalle();
 }
 
 /* ═══════════════════════════════════════════
@@ -426,16 +456,6 @@ function dessinerMotif() {
 
   dessinerMarqueur(pointsChemin[0],                       '▶', '#2ecc71');
   dessinerMarqueur(pointsChemin[pointsChemin.length - 1], '★', '#f0c060');
-
-  if (progression > 0) {
-    const pp = pointsChemin[Math.min(progression, pointsChemin.length - 1)];
-    ctx.save();
-    ctx.fillStyle   = 'rgba(46, 204, 113, 0.85)';
-    ctx.shadowColor = '#2ecc71';
-    ctx.shadowBlur  = 10;
-    ctx.beginPath(); ctx.arc(pp.x, pp.y, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  }
 }
 
 function construireFormeCouloir(cor) {
@@ -493,25 +513,50 @@ function dessinerMarqueur(pt, symbole, couleur) {
 }
 
 /* ═══════════════════════════════════════════
-   TRACÉ DU JOUEUR
+   DESSIN DE LA BALLE
 ═══════════════════════════════════════════ */
-function dessinerTrace() {
-  if (pointsTrace.length < 2) return;
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.lineWidth = 5;
-  for (let i = 1; i < pointsTrace.length; i++) {
-    const t = i / pointsTrace.length;
-    ctx.strokeStyle = `rgba(${Math.round(46 + t * 209)}, ${Math.round(204 - t * 54)}, ${Math.round(113 - t * 13)}, 0.85)`;
-    ctx.beginPath();
-    ctx.moveTo(pointsTrace[i - 1].x, pointsTrace[i - 1].y);
-    ctx.lineTo(pointsTrace[i].x,     pointsTrace[i].y);
-    ctx.stroke();
+function dessinerBalle() {
+  // Traînée lumineuse
+  if (pointsTrace.length > 1) {
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 1; i < pointsTrace.length; i++) {
+      const t = i / pointsTrace.length;
+      ctx.globalAlpha = t * 0.6;
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth   = 3 * t;
+      ctx.shadowColor = '#2ecc71';
+      ctx.shadowBlur  = 4;
+      ctx.beginPath();
+      ctx.moveTo(pointsTrace[i - 1].x, pointsTrace[i - 1].y);
+      ctx.lineTo(pointsTrace[i].x,     pointsTrace[i].y);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
-  const dernier = pointsTrace[pointsTrace.length - 1];
-  ctx.fillStyle   = '#fff';
-  ctx.shadowColor = 'rgba(255,255,255,0.8)'; ctx.shadowBlur = 10;
-  ctx.beginPath(); ctx.arc(dernier.x, dernier.y, 6, 0, Math.PI * 2); ctx.fill();
+
+  // Corps de la balle
+  ctx.save();
+  const rayon = 10;
+  // Halo extérieur
+  ctx.beginPath();
+  ctx.arc(balle.x, balle.y, rayon + 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.fill();
+  // Balle avec dégradé radial
+  const gradient = ctx.createRadialGradient(
+    balle.x - 3, balle.y - 3, 1,
+    balle.x, balle.y, rayon
+  );
+  gradient.addColorStop(0,   '#ffffff');
+  gradient.addColorStop(0.4, '#c8e6c9');
+  gradient.addColorStop(1,   '#4caf50');
+  ctx.beginPath();
+  ctx.arc(balle.x, balle.y, rayon, 0, Math.PI * 2);
+  ctx.fillStyle   = gradient;
+  ctx.shadowColor = 'rgba(76, 175, 80, 0.9)';
+  ctx.shadowBlur  = 18;
+  ctx.fill();
   ctx.restore();
 }
 
