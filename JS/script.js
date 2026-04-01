@@ -4,11 +4,11 @@
 const CFG = {
   corridor:      30,
   totalSec:     120,
-  timePenalty:   10,
-  gravite:     0.0004,  // accélération par degré d'inclinaison
-  amortissement: 0.88,  // friction de la balle
-  vitesseMax:     3,    // pixels/frame max
-  trailMax:      50,    // longueur de la traînée
+  gravite:      0.02,  // accélération par degré d'inclinaison (px/frame²)
+  amortissement: 0.84, // friction
+  vitesseMax:    3,    // px/frame max
+  trailMax:      40,
+  rayonBalle:    8,
 };
 
 const POURCENTAGES_CHEMIN = [
@@ -29,13 +29,12 @@ const POURCENTAGES_CHEMIN = [
 ═══════════════════════════════════════════ */
 let secondesRestantes = CFG.totalSec;
 let intervalleMinuterie;
-let jeuActif        = false;
-let balle           = { x: 0, y: 0, vx: 0, vy: 0 };
-let inclinaison     = { gamma: 0, beta: 0 };
-let pointsTrace     = [];
-let pointsChemin    = [];
-let progression     = 0;
-let penaliteEnCours = false;
+let jeuActif     = false;
+let balle        = { x: 0, y: 0, vx: 0, vy: 0 };
+let inclinaison  = { gamma: 0, beta: 0 };
+let pointsTrace  = [];
+let pointsChemin = [];
+let progression  = 0;
 let partiesConfettis = [];
 
 /* ═══════════════════════════════════════════
@@ -84,24 +83,21 @@ window.addEventListener('resize', () => { redimensionner(); if (jeuActif) dessin
    CAPTEUR D'INCLINAISON
 ═══════════════════════════════════════════ */
 window.addEventListener('deviceorientation', (e) => {
-  inclinaison.gamma = e.gamma || 0; // inclinaison gauche/droite (-90 à 90)
-  inclinaison.beta  = e.beta  || 0; // inclinaison avant/arrière (-180 à 180)
+  inclinaison.gamma = e.gamma || 0;
+  inclinaison.beta  = e.beta  || 0;
 });
 
-// Simulation bureau : la souris contrôle l'inclinaison
+// Simulation bureau : souris sur le canvas
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
-  const cx = rect.left + rect.width  / 2;
-  const cy = rect.top  + rect.height / 2;
-  inclinaison.gamma = (e.clientX - cx) / rect.width  * 60;
-  inclinaison.beta  = (e.clientY - cy) / rect.height * 60;
+  inclinaison.gamma = (e.clientX - (rect.left + rect.width  / 2)) / rect.width  * 60;
+  inclinaison.beta  = (e.clientY - (rect.top  + rect.height / 2)) / rect.height * 60;
 });
 
 /* ═══════════════════════════════════════════
    SÉLECTION DE NIVEAU
 ═══════════════════════════════════════════ */
 async function choisirNiveau() {
-  // Demander la permission iOS 13+ pour le gyroscope
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
@@ -110,9 +106,7 @@ async function choisirNiveau() {
         afficherNotification('Permission capteurs refusée', 'erreur');
         return;
       }
-    } catch (err) {
-      console.warn('Permission capteurs :', err);
-    }
+    } catch (err) {}
   }
   document.getElementById('selectionNiveau').classList.add('masque');
   demarrerDecompte();
@@ -165,7 +159,6 @@ function initialiserJeu() {
   secondesRestantes = CFG.totalSec;
   progression       = 0;
   pointsTrace       = [];
-  penaliteEnCours   = false;
   jeuActif          = true;
   inclinaison       = { gamma: 0, beta: 0 };
   balle = {
@@ -202,11 +195,11 @@ function mettreAJourMinuterie() {
 function mettreAJourBalle() {
   if (!jeuActif) return;
 
-  // Accélération due à l'inclinaison (gravité simulée)
-  balle.vx += inclinaison.gamma * CFG.gravite * LG;
-  balle.vy += inclinaison.beta  * CFG.gravite * HT;
+  // Accélération due à l'inclinaison
+  balle.vx += inclinaison.gamma * CFG.gravite;
+  balle.vy += inclinaison.beta  * CFG.gravite;
 
-  // Amortissement (friction)
+  // Amortissement
   balle.vx *= CFG.amortissement;
   balle.vy *= CFG.amortissement;
 
@@ -221,62 +214,42 @@ function mettreAJourBalle() {
   balle.x += balle.vx;
   balle.y += balle.vy;
 
-  // Contraindre au canvas
-  balle.x = Math.max(0, Math.min(LG, balle.x));
-  balle.y = Math.max(0, Math.min(HT, balle.y));
+  // ── Collision avec les murs du couloir ──────────────────
+  const plusProche = plusProchePointChemin(balle);
+  const dist       = Math.hypot(balle.x - plusProche.x, balle.y - plusProche.y);
+  const limite     = CFG.corridor - CFG.rayonBalle;
+
+  if (dist > limite && dist > 0) {
+    // Normale : du chemin vers la balle
+    const nx = (balle.x - plusProche.x) / dist;
+    const ny = (balle.y - plusProche.y) / dist;
+
+    // Repousser la balle à l'intérieur du couloir
+    balle.x = plusProche.x + nx * limite;
+    balle.y = plusProche.y + ny * limite;
+
+    // Annuler la composante de vitesse perpendiculaire au mur (glissement)
+    const vDotN = balle.vx * nx + balle.vy * ny;
+    if (vDotN > 0) {
+      balle.vx -= vDotN * nx;
+      balle.vy -= vDotN * ny;
+    }
+  }
+  // ────────────────────────────────────────────────────────
+
+  // Progression sur le chemin
+  if (plusProche.seg > progression) progression = plusProche.seg;
 
   // Traînée
   pointsTrace.push({ x: balle.x, y: balle.y });
   if (pointsTrace.length > CFG.trailMax) pointsTrace.shift();
 
-  // Vérification du couloir
-  const plusProche = plusProchePointChemin(balle);
-  const dist       = Math.hypot(balle.x - plusProche.x, balle.y - plusProche.y);
-
-  if (dist > CFG.corridor) {
-    appliquerPenalite();
-    return;
-  }
-
-  if (plusProche.seg > progression) progression = plusProche.seg;
-
+  // Condition de victoire
   const pointFin = pointsChemin[pointsChemin.length - 1];
   if (progression >= pointsChemin.length - 2 &&
       Math.hypot(balle.x - pointFin.x, balle.y - pointFin.y) < CFG.corridor * 0.6) {
     declencherVictoire();
   }
-}
-
-/* ═══════════════════════════════════════════
-   PÉNALITÉ TEMPORELLE
-═══════════════════════════════════════════ */
-function appliquerPenalite() {
-  if (penaliteEnCours) return;
-  penaliteEnCours = true;
-
-  secouerCanvas();
-  afficherNotification(`⏱ −${CFG.timePenalty} secondes !`, 'erreur');
-  if (navigator.vibrate) navigator.vibrate([60, 20, 60]);
-
-  secondesRestantes = Math.max(0, secondesRestantes - CFG.timePenalty);
-  mettreAJourMinuterie();
-
-  // Réinitialiser la balle au départ
-  balle       = { x: pointsChemin[0].x, y: pointsChemin[0].y, vx: 0, vy: 0 };
-  pointsTrace = [];
-  progression = 0;
-  jeuActif    = false;
-
-  setTimeout(() => {
-    penaliteEnCours = false;
-    if (secondesRestantes <= 0) {
-      declencherDefaite('Le temps est écoulé !');
-    } else {
-      jeuActif = true;
-      elementInstruction.textContent = `Recommencez depuis le début ! (−${CFG.timePenalty}s)`;
-      requestAnimationFrame(boucle);
-    }
-  }, 1000);
 }
 
 /* ═══════════════════════════════════════════
@@ -334,10 +307,8 @@ function dessinerMotifVictoire() {
     x: marge + px * zone,
     y: marge + py * zone,
   }));
-
   const cor = taille * 0.055;
 
-  c.beginPath();
   const gauche = [], droite = [];
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1];
@@ -351,6 +322,7 @@ function dessinerMotifVictoire() {
     gauche.push({ x: b.x + nx * cor, y: b.y + ny * cor });
     droite.push({ x: b.x - nx * cor, y: b.y - ny * cor });
   }
+  c.beginPath();
   c.moveTo(gauche[0].x, gauche[0].y);
   gauche.forEach(p => c.lineTo(p.x, p.y));
   for (let i = droite.length - 1; i >= 0; i--) c.lineTo(droite[i].x, droite[i].y);
@@ -517,15 +489,15 @@ function dessinerMarqueur(pt, symbole, couleur) {
    DESSIN DE LA BALLE
 ═══════════════════════════════════════════ */
 function dessinerBalle() {
-  // Traînée lumineuse
+  // Traînée
   if (pointsTrace.length > 1) {
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (let i = 1; i < pointsTrace.length; i++) {
       const t = i / pointsTrace.length;
-      ctx.globalAlpha = t * 0.6;
+      ctx.globalAlpha = t * 0.5;
       ctx.strokeStyle = '#2ecc71';
-      ctx.lineWidth   = 3 * t;
+      ctx.lineWidth   = CFG.rayonBalle * 1.5 * t;
       ctx.shadowColor = '#2ecc71';
       ctx.shadowBlur  = 4;
       ctx.beginPath();
@@ -536,42 +508,25 @@ function dessinerBalle() {
     ctx.restore();
   }
 
-  // Corps de la balle
+  // Balle
   ctx.save();
-  const rayon = 10;
-  // Halo extérieur
+  const r = CFG.rayonBalle;
   ctx.beginPath();
-  ctx.arc(balle.x, balle.y, rayon + 5, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.arc(balle.x, balle.y, r + 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
   ctx.fill();
-  // Balle avec dégradé radial
-  const gradient = ctx.createRadialGradient(
-    balle.x - 3, balle.y - 3, 1,
-    balle.x, balle.y, rayon
-  );
+
+  const gradient = ctx.createRadialGradient(balle.x - 2, balle.y - 2, 1, balle.x, balle.y, r);
   gradient.addColorStop(0,   '#ffffff');
   gradient.addColorStop(0.4, '#c8e6c9');
   gradient.addColorStop(1,   '#4caf50');
   ctx.beginPath();
-  ctx.arc(balle.x, balle.y, rayon, 0, Math.PI * 2);
+  ctx.arc(balle.x, balle.y, r, 0, Math.PI * 2);
   ctx.fillStyle   = gradient;
-  ctx.shadowColor = 'rgba(76, 175, 80, 0.9)';
-  ctx.shadowBlur  = 18;
+  ctx.shadowColor = 'rgba(76,175,80,0.9)';
+  ctx.shadowBlur  = 16;
   ctx.fill();
   ctx.restore();
-}
-
-/* ═══════════════════════════════════════════
-   SECOUSSE
-═══════════════════════════════════════════ */
-function secouerCanvas() {
-  const enveloppeur = document.getElementById('enveloppeurCanvas');
-  enveloppeur.style.transition = 'none';
-  let n = 0;
-  const iv = setInterval(() => {
-    enveloppeur.style.transform = `translate(${(Math.random() - .5) * 14}px,${(Math.random() - .5) * 14}px)`;
-    if (++n > 6) { clearInterval(iv); enveloppeur.style.transform = ''; }
-  }, 60);
 }
 
 /* ═══════════════════════════════════════════
