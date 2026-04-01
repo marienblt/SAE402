@@ -575,10 +575,7 @@ function animerConfettis() {
    UTILITAIRES
 ═══════════════════════════════════════════ */
 function afficher(id) { document.getElementById(id).classList.add('visible'); }
-function masquer(id)  {
-  const el = document.getElementById(id);
-  el.classList.remove('visible');
-}
+function masquer(id)  { document.getElementById(id).classList.remove('visible'); }
 
 /* ═══════════════════════════════════════════
    DÉMARRAGE
