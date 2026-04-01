@@ -574,15 +574,8 @@ function animerConfettis() {
 /* ═══════════════════════════════════════════
    UTILITAIRES
 ═══════════════════════════════════════════ */
-function afficher(id) {
-  const el = document.getElementById(id);
-  el.style.display = 'flex';
-}
-function masquer(id) {
-  const el = document.getElementById(id);
-  el.style.display = 'none';
-  el.classList.remove('visible');
-}
+function afficher(id) { document.getElementById(id).classList.add('visible'); }
+function masquer(id)  { document.getElementById(id).classList.remove('visible'); }
 
 /* ═══════════════════════════════════════════
    DÉMARRAGE

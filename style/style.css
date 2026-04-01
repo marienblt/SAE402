@@ -246,14 +246,15 @@
   /* ── Superposition victoire (style page d'accueil) ── */
   #superpositionVictoire {
     position: fixed; inset: 0; z-index: 60;
-    display: none; flex-direction: column;
+    display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 24px;
     background:
       linear-gradient(rgba(10, 6, 2, 0.45), rgba(10, 6, 2, 0.45)),
       url("../IMG/Fichier 2rue des tanneurs.png") center center / cover no-repeat;
+    opacity: 0; pointer-events: none; transition: opacity .5s;
   }
-  #superpositionVictoire.visible { display: flex; }
+  #superpositionVictoire.visible { opacity: 1; pointer-events: all; }
 
   .enveloppeur-motif {
     display: flex; justify-content: center; align-items: center;
