@@ -5,9 +5,9 @@ const CFG = {
   corridor:      30,
   totalSec:     120,
   timePenalty:   10,
-  gravite:     0.0018,  // accélération par degré d'inclinaison
-  amortissement: 0.92,  // friction de la balle
-  vitesseMax:     6,    // pixels/frame max
+  gravite:     0.0004,  // accélération par degré d'inclinaison
+  amortissement: 0.88,  // friction de la balle
+  vitesseMax:     3,    // pixels/frame max
   trailMax:      50,    // longueur de la traînée
 };
 
@@ -274,6 +274,7 @@ function appliquerPenalite() {
     } else {
       jeuActif = true;
       elementInstruction.textContent = `Recommencez depuis le début ! (−${CFG.timePenalty}s)`;
+      requestAnimationFrame(boucle);
     }
   }, 1000);
 }
