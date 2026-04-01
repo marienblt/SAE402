@@ -214,46 +214,39 @@ function mettreAJourBalle() {
   balle.x += balle.vx;
   balle.y += balle.vy;
 
-  // ── Mise à jour de la progression ────────────────────────
-  // Chercher parmi les segments proches (progression actuelle ±2)
-  const iMin = Math.max(0, progression - 1);
-  const iMax = Math.min(pointsChemin.length - 2, progression + 2);
-  for (let i = iMin; i <= iMax; i++) {
+  // ── Collision + progression ──────────────────────────────
+  // On cherche le segment accessible (0 → progression+1) le plus proche.
+  // La progression n'avance que si la balle est réellement plus proche
+  // du segment suivant que du segment courant.
+  const limite    = CFG.corridor - CFG.rayonBalle;
+  const iMax      = Math.min(progression + 1, pointsChemin.length - 2);
+
+  let minDist  = Infinity;
+  let closestCP  = null;
+  let closestSeg = progression;
+
+  for (let i = 0; i <= iMax; i++) {
     const cp = plusProchePointSegment(balle, pointsChemin[i], pointsChemin[i + 1]);
     const d  = Math.hypot(balle.x - cp.x, balle.y - cp.y);
-    if (d < CFG.corridor && i > progression) progression = i;
+    if (d < minDist) { minDist = d; closestCP = cp; closestSeg = i; }
   }
 
-  // ── Collision avec les murs du couloir ───────────────────
-  // On ne vérifie que le segment courant et le suivant pour éviter
-  // qu'un segment lointain repousse la balle dans le mauvais sens
-  const limite = CFG.corridor - CFG.rayonBalle;
-  const segmentsAVerifier = [progression, Math.min(progression + 1, pointsChemin.length - 2)];
-
-  for (let iter = 0; iter < 3; iter++) {
-    let correction = false;
-    for (const i of segmentsAVerifier) {
-      const cp   = plusProchePointSegment(balle, pointsChemin[i], pointsChemin[i + 1]);
-      const dx   = balle.x - cp.x;
-      const dy   = balle.y - cp.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist > limite && dist > 0) {
-        const nx = dx / dist;
-        const ny = dy / dist;
-        // Repousser à l'intérieur
-        balle.x = cp.x + nx * limite;
-        balle.y = cp.y + ny * limite;
-        // Supprimer la vitesse sortante (glissement le long du mur)
-        const vDotN = balle.vx * nx + balle.vy * ny;
-        if (vDotN > 0) {
-          balle.vx -= vDotN * nx;
-          balle.vy -= vDotN * ny;
-        }
-        correction = true;
-      }
+  // Repousser la balle si elle dépasse la limite du couloir
+  if (minDist > limite && minDist > 0) {
+    const nx = (balle.x - closestCP.x) / minDist;
+    const ny = (balle.y - closestCP.y) / minDist;
+    balle.x = closestCP.x + nx * limite;
+    balle.y = closestCP.y + ny * limite;
+    // Supprimer uniquement la composante sortante (glissement)
+    const vDotN = balle.vx * nx + balle.vy * ny;
+    if (vDotN > 0) {
+      balle.vx -= vDotN * nx;
+      balle.vy -= vDotN * ny;
     }
-    if (!correction) break;
   }
+
+  // La progression n'avance que d'un segment à la fois, jamais en arrière
+  if (closestSeg > progression) progression = closestSeg;
   // ────────────────────────────────────────────────────────
 
   // Traînée
