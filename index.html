@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-Jeu : Rue des Tanneurs</title>
+    <link rel="preload" href="style/style.css" as="style">
+    <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+
+<!-- En tête -->
+<div id="entete">
+    <div class="ent-titre">RUE DES TANNEURS</div>
+    <div class="ent-temps" id="temps">2:00</div>
+</div>
+
+<!-- Canvas -->
+<div id="enveloppeurCanvas">
+    <canvas id="canvasJeu"></canvas>
+</div>
+
+<!-- Instruction -->
+<div id="barreInstruction">Suivez le tracé doré avec votre doigt ou votre souris</div>
+
+<!-- Notification -->
+<div id="notification"></div>
+
+<!-- Décompte -->
+<div id="decompte"><div id="numeroDecompte">3</div></div>
+
+<!-- Sélection de niveau -->
+<div id="selectionNiveau">
+    <div class="titre-selection">
+      Rue des Tanneurs
+      <small>Chapitre II</small>
+    </div>
+    <div class="separateur">✦</div>
+    <div class="bulle-consignes">
+      <p>Tracez le motif doré avec votre doigt sans toucher les bords.</p>
+      <p>Chaque erreur vous coûte <strong>10 secondes</strong>. Vous avez <strong>2 minutes</strong>.</p>
+    </div>
+    <div class="enveloppeur-bouton">
+      <button class="bouton-commencer" onclick="choisirNiveau()">Commencer</button>
+    </div>
+</div>
+
+<!-- Victoire -->
+<div class="superposition" id="superpositionVictoire">
+    <div class="fenetre fenetre-victoire">
+      <div class="titre-victoire">✦ Motif accompli ✦</div>
+      <div class="sous-titre-victoire">Vous avez tracé le chemin sans dévier</div>
+      <div class="enveloppeur-motif">
+        <canvas id="canvasMotifVictoire"></canvas>
+      </div>
+      <div class="boutons-fenetre">
+        <button onclick="rejouer()">Rejouer</button>
+        <button class="secondaire" onclick="allerSelection()">← Retour</button>
+      </div>
+    </div>
+</div>
+
+<!-- Défaite -->
+<div class="superposition" id="superpositionDefaite">
+    <div class="fenetre">
+      <div class="icone-fenetre">💀</div>
+      <h2>PERDU !</h2>
+      <p id="raisonDefaite">Vous avez trop dévié du chemin.</p>
+      <div class="boutons-fenetre">
+        <button onclick="rejouer()">Réessayer</button>
+        <button class="secondaire" onclick="allerSelection()">← Niveaux</button>
+      </div>
+    </div>
+</div>
+
+<canvas id="canvasConfettis"></canvas>
+
+<script src="JS/script.js"></script>
+</body>
+</html>
