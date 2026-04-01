@@ -274,6 +274,18 @@
     display: block;
   }
 
+  .boutons-victoire {
+    display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+  }
+  .boutons-victoire .bouton-commencer {
+    padding: 16px 32px;
+    font-size: clamp(.75rem, 2.8vw, .9rem);
+  }
+  .bouton-continuer {
+    background: linear-gradient(135deg, #2c3e50, #4a6474);
+    color: var(--ivoire);
+  }
+
   .bouton-retour {
     font-family: 'Crimson Text', serif; font-style: italic;
     font-size: clamp(.8rem, 2.8vw, .95rem);
