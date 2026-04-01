@@ -214,30 +214,18 @@ function mettreAJourBalle() {
   balle.x += balle.vx;
   balle.y += balle.vy;
 
-  // ── Collision + progression ──────────────────────────────
-  // On cherche le segment accessible (0 → progression+1) le plus proche.
-  // La progression n'avance que si la balle est réellement plus proche
-  // du segment suivant que du segment courant.
-  const limite    = CFG.corridor - CFG.rayonBalle;
-  const iMax      = Math.min(progression + 1, pointsChemin.length - 2);
+  // ── Collision : on contraint la balle dans le segment courant ──
+  const limite = CFG.corridor - CFG.rayonBalle;
+  const cp     = plusProchePointSegment(balle, pointsChemin[progression], pointsChemin[progression + 1]);
+  const dx     = balle.x - cp.x;
+  const dy     = balle.y - cp.y;
+  const dist   = Math.hypot(dx, dy);
 
-  let minDist  = Infinity;
-  let closestCP  = null;
-  let closestSeg = progression;
-
-  for (let i = 0; i <= iMax; i++) {
-    const cp = plusProchePointSegment(balle, pointsChemin[i], pointsChemin[i + 1]);
-    const d  = Math.hypot(balle.x - cp.x, balle.y - cp.y);
-    if (d < minDist) { minDist = d; closestCP = cp; closestSeg = i; }
-  }
-
-  // Repousser la balle si elle dépasse la limite du couloir
-  if (minDist > limite && minDist > 0) {
-    const nx = (balle.x - closestCP.x) / minDist;
-    const ny = (balle.y - closestCP.y) / minDist;
-    balle.x = closestCP.x + nx * limite;
-    balle.y = closestCP.y + ny * limite;
-    // Supprimer uniquement la composante sortante (glissement)
+  if (dist > limite && dist > 0) {
+    const nx = dx / dist;
+    const ny = dy / dist;
+    balle.x = cp.x + nx * limite;
+    balle.y = cp.y + ny * limite;
     const vDotN = balle.vx * nx + balle.vy * ny;
     if (vDotN > 0) {
       balle.vx -= vDotN * nx;
@@ -245,9 +233,16 @@ function mettreAJourBalle() {
     }
   }
 
-  // La progression n'avance que d'un segment à la fois, jamais en arrière
-  if (closestSeg > progression) progression = closestSeg;
-  // ────────────────────────────────────────────────────────
+  // ── Progression : avance uniquement quand la balle ──────────
+  // atteint physiquement le prochain point de jonction
+  const segSuivant = progression + 1;
+  if (segSuivant < pointsChemin.length - 1) {
+    const jonction = pointsChemin[segSuivant];
+    if (Math.hypot(balle.x - jonction.x, balle.y - jonction.y) < CFG.corridor * 0.8) {
+      progression = segSuivant;
+    }
+  }
+  // ────────────────────────────────────────────────────────────
 
   // Traînée
   pointsTrace.push({ x: balle.x, y: balle.y });
