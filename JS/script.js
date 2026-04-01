@@ -285,7 +285,7 @@ function declencherDefaite(raison) {
   jeuActif = false;
   clearInterval(intervalleMinuterie);
   document.getElementById('raisonDefaite').textContent = raison;
-  setTimeout(() => document.getElementById('superpositionDefaite').classList.add('visible'), 600);
+  setTimeout(() => afficher('superpositionDefaite'), 600);
 }
 
 function declencherVictoire() {
@@ -294,7 +294,7 @@ function declencherVictoire() {
   lancerConfettis();
   setTimeout(() => {
     dessinerMotifVictoire();
-    document.getElementById('superpositionVictoire').classList.add('visible');
+    afficher('superpositionVictoire');
   }, 600);
 }
 
@@ -574,8 +574,15 @@ function animerConfettis() {
 /* ═══════════════════════════════════════════
    UTILITAIRES
 ═══════════════════════════════════════════ */
-function afficher(id) { document.getElementById(id).classList.add('visible'); }
-function masquer(id)  { document.getElementById(id).classList.remove('visible'); }
+function afficher(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'flex';
+}
+function masquer(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'none';
+  el.classList.remove('visible');
+}
 
 /* ═══════════════════════════════════════════
    DÉMARRAGE
