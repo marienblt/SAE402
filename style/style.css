@@ -286,12 +286,7 @@
   .bouton-continuer {
     background: linear-gradient(135deg, #2c3e50, #4a6474);
     color: var(--ivoire);
-    white-space: normal;
-    max-width: 150px;
     line-height: 1.5;
-    height: auto;
-    padding-top: 14px !important;
-    padding-bottom: 14px !important;
   }
 
   .bouton-retour {
