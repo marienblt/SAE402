@@ -278,9 +278,9 @@
     display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
   }
   .boutons-victoire .bouton-commencer {
-    padding: 12px 18px !important;
-    font-size: .72rem !important;
-    letter-spacing: .15em !important;
+    padding: 12px 18px;
+    font-size: .72rem;
+    letter-spacing: .15em;
     white-space: nowrap;
   }
   .bouton-continuer {
