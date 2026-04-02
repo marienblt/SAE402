@@ -284,6 +284,7 @@
     white-space: nowrap;
   }
   .bouton-continuer {
+    max-width: 300px;
     background: linear-gradient(135deg, #2c3e50, #4a6474);
     color: var(--ivoire);
   }
