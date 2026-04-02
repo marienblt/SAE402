@@ -325,7 +325,6 @@ function appliquerPenaliteTrou() {
     } else {
       jeuActif = true;
       elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
-      requestAnimationFrame(boucle);
     }
   }, 1000);
 }
@@ -452,7 +451,7 @@ function dessinerMotifVictoire() {
 function boucle() {
   mettreAJourBalle();
   dessinerImage();
-  if (jeuActif) requestAnimationFrame(boucle);
+  if (jeuActif || penaliteEnCours) requestAnimationFrame(boucle);
 }
 
 function dessinerImage() {
