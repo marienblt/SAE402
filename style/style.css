@@ -289,7 +289,10 @@
     white-space: normal;
     line-height: 1.5;
     max-width: 100px;
+    overflow: visible;
+    animation: none;
   }
+  .bouton-continuer::after { display: none; }
 
   .bouton-retour {
     font-family: 'Crimson Text', serif; font-style: italic;
