@@ -436,18 +436,11 @@ function dessinerMotif() {
 }
 
 function construireFormeCouloir(cor) {
+  const n = pointsChemin.length;
   const gauche = [], droite = [];
-  for (let i = 0; i < pointsChemin.length - 1; i++) {
-    const a = pointsChemin[i], b = pointsChemin[i + 1];
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;
-    if (i === 0) {
-      gauche.push({ x: a.x + nx * cor, y: a.y + ny * cor });
-      droite.push({ x: a.x - nx * cor, y: a.y - ny * cor });
-    }
-    gauche.push({ x: b.x + nx * cor, y: b.y + ny * cor });
-    droite.push({ x: b.x - nx * cor, y: b.y - ny * cor });
+  for (let i = 0; i < n; i++) {
+    gauche.push(calculerPointDecale(pointsChemin, i,  cor));
+    droite.push(calculerPointDecale(pointsChemin, i, -cor));
   }
   ctx.moveTo(gauche[0].x, gauche[0].y);
   gauche.forEach(p => ctx.lineTo(p.x, p.y));
@@ -455,16 +448,40 @@ function construireFormeCouloir(cor) {
   ctx.closePath();
 }
 
+function calculerPointDecale(pts, i, decalage) {
+  const n = pts.length;
+  if (i === 0) {
+    const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: pts[0].x + (-dy/len)*decalage, y: pts[0].y + (dx/len)*decalage };
+  }
+  if (i === n - 1) {
+    const dx = pts[n-1].x - pts[n-2].x, dy = pts[n-1].y - pts[n-2].y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: pts[n-1].x + (-dy/len)*decalage, y: pts[n-1].y + (dx/len)*decalage };
+  }
+  // Point intérieur : intersection des deux lignes décalées (miter join)
+  const dx1 = pts[i].x - pts[i-1].x, dy1 = pts[i].y - pts[i-1].y;
+  const len1 = Math.hypot(dx1, dy1) || 1;
+  const nx1 = -dy1/len1, ny1 = dx1/len1;
+
+  const dx2 = pts[i+1].x - pts[i].x, dy2 = pts[i+1].y - pts[i].y;
+  const len2 = Math.hypot(dx2, dy2) || 1;
+  const nx2 = -dy2/len2, ny2 = dx2/len2;
+
+  const mx = nx1 + nx2, my = ny1 + ny2;
+  const mlen = Math.hypot(mx, my) || 1;
+  const mnx = mx/mlen, mny = my/mlen;
+  const sinH = mnx*nx1 + mny*ny1 || 1;
+  const d = Math.min(Math.abs(decalage/sinH), Math.abs(decalage)*4) * Math.sign(decalage);
+  return { x: pts[i].x + mnx*d, y: pts[i].y + mny*d };
+}
+
 function tracerCheminDecale(decalage) {
   ctx.beginPath();
-  for (let i = 0; i < pointsChemin.length - 1; i++) {
-    const a = pointsChemin[i], b = pointsChemin[i + 1];
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len * decalage, ny = dx / len * decalage;
-    if (i === 0) ctx.moveTo(a.x + nx, a.y + ny);
-    else         ctx.lineTo(a.x + nx, a.y + ny);
-    ctx.lineTo(b.x + nx, b.y + ny);
+  for (let i = 0; i < pointsChemin.length; i++) {
+    const p = calculerPointDecale(pointsChemin, i, decalage);
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
   }
   ctx.stroke();
 }
