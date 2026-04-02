@@ -286,7 +286,9 @@
   .bouton-continuer {
     background: linear-gradient(135deg, #2c3e50, #4a6474);
     color: var(--ivoire);
+    white-space: normal;
     line-height: 1.5;
+    max-width: 160px;
   }
 
   .bouton-retour {
