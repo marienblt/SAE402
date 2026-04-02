@@ -4,11 +4,14 @@
 const CFG = {
   corridor:      30,
   totalSec:     120,
-  gravite:      0.02,  // accélération par degré d'inclinaison (px/frame²)
-  amortissement: 0.84, // friction
-  vitesseMax:    3,    // px/frame max
+  timePenalty:   15,
+  gravite:      0.02,
+  amortissement: 0.84,
+  vitesseMax:    3,
   trailMax:      40,
   rayonBalle:    8,
+  nbTrous:       5,    // nombre de trous sur le chemin
+  rayonTrou:     12,   // rayon visuel du trou
 };
 
 const DEPART = [0.50, 0.95];
@@ -38,12 +41,14 @@ const POURCENTAGES_CHEMIN = [
 ═══════════════════════════════════════════ */
 let secondesRestantes = CFG.totalSec;
 let intervalleMinuterie;
-let jeuActif     = false;
-let balle        = { x: 0, y: 0, vx: 0, vy: 0 };
-let inclinaison  = { gamma: 0, beta: 0 };
-let pointsTrace  = [];
-let pointsChemin = [];
-let progression  = 0;
+let jeuActif        = false;
+let penaliteEnCours = false;
+let balle           = { x: 0, y: 0, vx: 0, vy: 0 };
+let inclinaison     = { gamma: 0, beta: 0 };
+let pointsTrace     = [];
+let pointsChemin    = [];
+let trous           = [];
+let progression     = 0;
 let partiesConfettis = [];
 
 /* ═══════════════════════════════════════════
@@ -164,18 +169,40 @@ function demarrerDecompte() {
 /* ═══════════════════════════════════════════
    INITIALISATION
 ═══════════════════════════════════════════ */
+function genererTrous() {
+  trous = [];
+  // Segments éligibles : on évite le 1er et le dernier
+  const eligibles = [];
+  for (let i = 1; i < pointsChemin.length - 2; i++) {
+    eligibles.push(i);
+  }
+  // Mélanger et prendre nbTrous segments
+  for (let i = eligibles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [eligibles[i], eligibles[j]] = [eligibles[j], eligibles[i]];
+  }
+  const choisis = eligibles.slice(0, CFG.nbTrous);
+  for (const seg of choisis) {
+    const a = pointsChemin[seg], b = pointsChemin[seg + 1];
+    // Position aléatoire entre 25% et 75% du segment
+    const t = 0.25 + Math.random() * 0.5;
+    trous.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, seg });
+  }
+}
+
+function reinitialiserBalle() {
+  balle       = { x: pointsChemin[0].x, y: pointsChemin[0].y, vx: 0, vy: 0 };
+  pointsTrace = [];
+  progression = 0;
+}
+
 function initialiserJeu() {
   secondesRestantes = CFG.totalSec;
-  progression       = 0;
-  pointsTrace       = [];
+  penaliteEnCours   = false;
   jeuActif          = true;
   inclinaison       = { gamma: 0, beta: 0 };
-  balle = {
-    x:  pointsChemin[0].x,
-    y:  pointsChemin[0].y,
-    vx: 0,
-    vy: 0,
-  };
+  reinitialiserBalle();
+  genererTrous();
   mettreAJourMinuterie();
   clearInterval(intervalleMinuterie);
   intervalleMinuterie = setInterval(tick, 1000);
@@ -253,6 +280,17 @@ function mettreAJourBalle() {
   }
   // ────────────────────────────────────────────────────────────
 
+  // ── Détection des trous ─────────────────────────────────
+  if (!penaliteEnCours) {
+    for (const trou of trous) {
+      if (Math.hypot(balle.x - trou.x, balle.y - trou.y) < CFG.rayonTrou) {
+        appliquerPenaliteTrou();
+        return;
+      }
+    }
+  }
+  // ────────────────────────────────────────────────────────
+
   // Traînée
   pointsTrace.push({ x: balle.x, y: balle.y });
   if (pointsTrace.length > CFG.trailMax) pointsTrace.shift();
@@ -263,6 +301,33 @@ function mettreAJourBalle() {
       Math.hypot(balle.x - pointFin.x, balle.y - pointFin.y) < CFG.corridor * 0.6) {
     declencherVictoire();
   }
+}
+
+/* ═══════════════════════════════════════════
+   PÉNALITÉ TROU
+═══════════════════════════════════════════ */
+function appliquerPenaliteTrou() {
+  penaliteEnCours = true;
+  jeuActif        = false;
+
+  secouerCanvas();
+  afficherNotification(`⚫ Trou ! −${CFG.timePenalty} secondes !`, 'erreur');
+  if (navigator.vibrate) navigator.vibrate([80, 30, 80]);
+
+  secondesRestantes = Math.max(0, secondesRestantes - CFG.timePenalty);
+  mettreAJourMinuterie();
+  reinitialiserBalle();
+
+  setTimeout(() => {
+    penaliteEnCours = false;
+    if (secondesRestantes <= 0) {
+      declencherDefaite('Le temps est écoulé !');
+    } else {
+      jeuActif = true;
+      elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
+      requestAnimationFrame(boucle);
+    }
+  }, 1000);
 }
 
 /* ═══════════════════════════════════════════
@@ -442,6 +507,31 @@ function dessinerMotif() {
 
   dessinerMarqueur(pointsChemin[0],                       '▶', '#2ecc71');
   dessinerMarqueur(pointsChemin[pointsChemin.length - 1], '★', '#f0c060');
+
+  // Trous
+  for (const trou of trous) {
+    ctx.save();
+    // Halo rouge d'avertissement
+    const halo = ctx.createRadialGradient(trou.x, trou.y, 0, trou.x, trou.y, CFG.rayonTrou * 2);
+    halo.addColorStop(0,   'rgba(180, 0, 0, 0.5)');
+    halo.addColorStop(1,   'rgba(180, 0, 0, 0)');
+    ctx.beginPath();
+    ctx.arc(trou.x, trou.y, CFG.rayonTrou * 2, 0, Math.PI * 2);
+    ctx.fillStyle = halo;
+    ctx.fill();
+    // Trou noir
+    const gradient = ctx.createRadialGradient(trou.x, trou.y, 0, trou.x, trou.y, CFG.rayonTrou);
+    gradient.addColorStop(0,   '#000000');
+    gradient.addColorStop(0.7, '#1a0505');
+    gradient.addColorStop(1,   'rgba(60,0,0,0.8)');
+    ctx.beginPath();
+    ctx.arc(trou.x, trou.y, CFG.rayonTrou, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur  = 10;
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function construireFormeCouloir(cor) {
