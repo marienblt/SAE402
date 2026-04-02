@@ -288,7 +288,7 @@
     color: var(--ivoire);
     white-space: normal;
     line-height: 1.5;
-    max-width: 160px;
+    max-width: 100px;
   }
 
   .bouton-retour {
