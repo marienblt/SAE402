@@ -291,12 +291,18 @@
   .bouton-retour {
     font-family: 'Crimson Text', serif; font-style: italic;
     font-size: clamp(.8rem, 2.8vw, .95rem);
-    color: var(--ivoire-f);
-    background: none; border: none;
+    color: var(--ivoire);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(245, 232, 200, 0.35);
+    border-radius: 30px;
+    padding: 8px 22px;
     cursor: pointer; letter-spacing: .05em;
-    opacity: .7; transition: opacity .2s;
+    transition: background .2s, border-color .2s;
   }
-  .bouton-retour:hover { opacity: 1; }
+  .bouton-retour:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(245, 232, 200, 0.6);
+  }
 
   /* Confettis */
   #canvasConfettis {
