@@ -319,12 +319,14 @@ function appliquerPenaliteTrou() {
   reinitialiserBalle();
 
   setTimeout(() => {
-    penaliteEnCours = false;
     if (secondesRestantes <= 0) {
+      penaliteEnCours = false;
       declencherDefaite('Le temps est écoulé !');
     } else {
       jeuActif = true;
+      penaliteEnCours = false;
       elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
+      requestAnimationFrame(boucle);
     }
   }, 1000);
 }
@@ -451,7 +453,7 @@ function dessinerMotifVictoire() {
 function boucle() {
   mettreAJourBalle();
   dessinerImage();
-  if (jeuActif || penaliteEnCours) requestAnimationFrame(boucle);
+  if (jeuActif) requestAnimationFrame(boucle);
 }
 
 function dessinerImage() {
