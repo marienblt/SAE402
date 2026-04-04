@@ -173,7 +173,7 @@ function genererTrous() {
   trous = [];
   // Segments éligibles : on évite le 1er et le dernier
   const eligibles = [];
-  for (let i = 1; i < pointsChemin.length - 2; i++) {
+  for (let i = 3; i < pointsChemin.length - 3; i++) {
     eligibles.push(i);
   }
   // Mélanger et prendre nbTrous segments
@@ -322,12 +322,14 @@ function appliquerPenaliteTrou() {
     if (secondesRestantes <= 0) {
       penaliteEnCours = false;
       declencherDefaite('Le temps est écoulé !');
-    } else {
-      jeuActif = true;
-      penaliteEnCours = false;
-      elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
-      requestAnimationFrame(boucle);
+      return;
     }
+    // Invincibilité : on remet le jeu actif mais penaliteEnCours encore true
+    // pour bloquer la détection des trous pendant 800ms supplémentaires
+    jeuActif = true;
+    requestAnimationFrame(boucle);
+    elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
+    setTimeout(() => { penaliteEnCours = false; }, 800);
   }, 1000);
 }
 
