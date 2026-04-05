@@ -308,6 +308,7 @@ function mettreAJourBalle() {
 ═══════════════════════════════════════════ */
 function appliquerPenaliteTrou() {
   penaliteEnCours = true;
+  jeuActif        = false;
 
   secouerCanvas();
   afficherNotification(`⚫ Trou ! −${CFG.timePenalty} secondes !`, 'erreur');
@@ -316,23 +317,25 @@ function appliquerPenaliteTrou() {
   secondesRestantes = Math.max(0, secondesRestantes - CFG.timePenalty);
   mettreAJourMinuterie();
 
-  // Replacer immédiatement la balle au départ
-  balle.x  = pointsChemin[0].x;
-  balle.y  = pointsChemin[0].y;
-  balle.vx = 0;
-  balle.vy = 0;
-  pointsTrace = [];
-  progression = 0;
-
-  // Débloquer la détection après 1.5s (invincibilité)
   setTimeout(() => {
+    // Remettre la balle exactement au point de départ
+    balle.x  = pointsChemin[0].x;
+    balle.y  = pointsChemin[0].y;
+    balle.vx = 0;
+    balle.vy = 0;
+    pointsTrace = [];
+    progression = 0;
+
     penaliteEnCours = false;
+
     if (secondesRestantes <= 0) {
       declencherDefaite('Le temps est écoulé !');
     } else {
+      jeuActif = true;
       elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
+      requestAnimationFrame(boucle);
     }
-  }, 1500);
+  }, 1000);
 }
 
 /* ═══════════════════════════════════════════
