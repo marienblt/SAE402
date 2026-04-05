@@ -304,38 +304,12 @@ function mettreAJourBalle() {
 }
 
 /* ═══════════════════════════════════════════
-   PÉNALITÉ TROU
+   TROU
 ═══════════════════════════════════════════ */
 function appliquerPenaliteTrou() {
-  penaliteEnCours = true;
-  jeuActif        = false;
-
   secouerCanvas();
-  afficherNotification(`⚫ Trou ! −${CFG.timePenalty} secondes !`, 'erreur');
   if (navigator.vibrate) navigator.vibrate([80, 30, 80]);
-
-  secondesRestantes = Math.max(0, secondesRestantes - CFG.timePenalty);
-  mettreAJourMinuterie();
-
-  setTimeout(() => {
-    // Remettre la balle exactement au point de départ
-    balle.x  = pointsChemin[0].x;
-    balle.y  = pointsChemin[0].y;
-    balle.vx = 0;
-    balle.vy = 0;
-    pointsTrace = [];
-    progression = 0;
-
-    penaliteEnCours = false;
-
-    if (secondesRestantes <= 0) {
-      declencherDefaite('Le temps est écoulé !');
-    } else {
-      jeuActif = true;
-      elementInstruction.textContent = `Attention aux trous ! (−${CFG.timePenalty}s)`;
-      requestAnimationFrame(boucle);
-    }
-  }, 1000);
+  declencherDefaite('La balle est tombée dans un trou !');
 }
 
 /* ═══════════════════════════════════════════
