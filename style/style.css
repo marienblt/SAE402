@@ -210,37 +210,18 @@
     pointer-events: none;
   }
 
-  /* ── Superposition défaite ── */
-  .superposition {
+  /* ── Superposition défaite (même style que victoire) ── */
+  #superpositionDefaite {
     position: fixed; inset: 0; z-index: 60;
-    background: rgba(10,6,2,.9);
-    display: none; align-items: center; justify-content: center;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px;
+    background:
+      linear-gradient(rgba(10, 6, 2, 0.45), rgba(10, 6, 2, 0.45)),
+      url("../IMG/Fichier 2rue des tanneurs.png") center center / cover no-repeat;
+    opacity: 0; pointer-events: none; transition: opacity .5s;
   }
-  .superposition.visible { display: flex; }
-  .fenetre {
-    background: linear-gradient(160deg, #2a1e0e, #1a1208);
-    border: 1px solid rgba(201,151,58,.4); border-radius: 20px;
-    padding: 32px 40px; text-align: center;
-    box-shadow: 0 0 80px rgba(201,151,58,.2), 0 30px 60px rgba(0,0,0,.8);
-    transform: scale(.85); transition: transform .4s cubic-bezier(.175,.885,.32,1.275);
-    max-width: 320px; width: 88%;
-  }
-  .superposition.visible .fenetre { transform: scale(1); }
-  .icone-fenetre { font-size: 2.6rem; margin-bottom: 8px; }
-  .fenetre h2 { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--or-vif); margin-bottom: 8px; letter-spacing: .08em; }
-  .fenetre p  { color: var(--ivoire-f); font-size: .92rem; line-height: 1.5; margin-bottom: 12px; }
-  .boutons-fenetre { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .fenetre button {
-    padding: 9px 22px;
-    background: linear-gradient(135deg, #6b4226, #a0653a);
-    color: var(--or-vif); border: 1px solid rgba(201,151,58,.4);
-    border-radius: 30px; font-family: 'Cinzel', serif;
-    font-size: .82rem; font-weight: 700; cursor: pointer;
-    box-shadow: 0 4px 0 rgba(0,0,0,.4); transition: all .2s;
-  }
-  .fenetre button:hover { filter: brightness(1.15); transform: translateY(-1px); }
-  .fenetre button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
-  .fenetre button.secondaire { background: linear-gradient(135deg, #2c3e50, #4a6074); color: var(--ivoire-f); border-color: rgba(255,255,255,.1); }
+  #superpositionDefaite.visible { opacity: 1; pointer-events: all; }
 
   /* ── Superposition victoire (style page d'accueil) ── */
   #superpositionVictoire {

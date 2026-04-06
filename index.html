@@ -66,16 +66,19 @@
 </div>
 
 <!-- Défaite -->
-<div class="superposition" id="superpositionDefaite">
-    <div class="fenetre">
-      <div class="icone-fenetre">💀</div>
-      <h2>PERDU !</h2>
-      <p id="raisonDefaite">Vous avez trop dévié du chemin.</p>
-      <div class="boutons-fenetre">
-        <button onclick="rejouer()">Réessayer</button>
-        <button class="secondaire" onclick="allerSelection()">← Niveaux</button>
-      </div>
+<div id="superpositionDefaite">
+    <div class="titre-selection">
+      Rue des Tanneurs
+      <small>Partie terminée</small>
     </div>
+    <div class="separateur">✦</div>
+    <div class="bulle-consignes">
+      <p id="raisonDefaite">La balle est tombée dans un trou !</p>
+    </div>
+    <div class="enveloppeur-bouton">
+      <button class="bouton-commencer" onclick="rejouer()">Réessayer</button>
+    </div>
+    <button class="bouton-retour" onclick="allerSelection()">← Accueil</button>
 </div>
 
 <canvas id="canvasConfettis"></canvas>
