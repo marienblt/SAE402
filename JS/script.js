@@ -281,12 +281,10 @@ function mettreAJourBalle() {
   // ────────────────────────────────────────────────────────────
 
   // ── Détection des trous ─────────────────────────────────
-  if (!penaliteEnCours) {
-    for (const trou of trous) {
-      if (Math.hypot(balle.x - trou.x, balle.y - trou.y) < CFG.rayonTrou) {
-        appliquerPenaliteTrou();
-        return;
-      }
+  for (const trou of trous) {
+    if (Math.hypot(balle.x - trou.x, balle.y - trou.y) < CFG.rayonTrou) {
+      declencherDefaite('La balle est tombée dans un trou !');
+      return;
     }
   }
   // ────────────────────────────────────────────────────────
