@@ -214,10 +214,9 @@
   .superposition {
     position: fixed; inset: 0; z-index: 60;
     background: rgba(10,6,2,.9);
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none; transition: opacity .4s;
+    display: none; align-items: center; justify-content: center;
   }
-  .superposition.visible { opacity: 1; pointer-events: all; }
+  .superposition.visible { display: flex; }
   .fenetre {
     background: linear-gradient(160deg, #2a1e0e, #1a1208);
     border: 1px solid rgba(201,151,58,.4); border-radius: 20px;
